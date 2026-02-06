@@ -1141,12 +1141,29 @@
                 left: -1.8rem;
             }
 
+            .hero h1 {
+                font-size: clamp(2.4rem, 7.5vw, 3.5rem);
+            }
+
+            .hero .names {
+                font-size: clamp(3rem, 10vw, 5rem);
+            }
+
+            .hero .date {
+                font-size: clamp(1.35rem, 4.5vw, 1.95rem);
+            }
+
             .countdown-container {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
                 gap: 1rem;
+                max-width: 320px;
+                margin-left: auto;
+                margin-right: auto;
             }
 
             .countdown-item {
-                min-width: 80px;
+                min-width: auto;
                 padding: 1.5rem 1rem;
             }
 
@@ -1200,11 +1217,15 @@
             }
 
             .hero h1 {
-                font-size: 2rem;
+                font-size: clamp(2.4rem, 7vw, 3.2rem);
             }
 
             .hero .names {
-                font-size: 1.5rem;
+                font-size: clamp(2.8rem, 9vw, 4.2rem);
+            }
+
+            .hero .date {
+                font-size: clamp(1.4rem, 4.5vw, 1.9rem);
             }
 
             .date-number {
@@ -1213,13 +1234,23 @@
                 line-height: 50px;
             }
 
+            .countdown-container {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+                max-width: 280px;
+                margin-left: auto;
+                margin-right: auto;
+                margin-top: 2rem;
+            }
+
             .countdown-item {
-                min-width: 70px;
-                padding: 1rem 0.8rem;
+                min-width: auto;
+                padding: 1.2rem 0.8rem;
             }
 
             .countdown-number {
-                font-size: 1.5rem;
+                font-size: 1.8rem;
             }
 
             .program-photo-frame {
@@ -1237,10 +1268,6 @@
             <div class="date">
                 Воскресенье • <span class="date-number">16</span> Август 2026
             </div>
-            <p class="lead-text">
-                Мы с трепетом и радостью приглашаем вас разделить с нами день нашей свадьбы.
-                Сохраните эту дату, чтобы вместе пережить самые тёплые и нежные моменты в кругу близких людей.
-            </p>
         </div>
     </section>
 
@@ -1253,7 +1280,7 @@
             </div>
         </div>
         <div class="intro-content">
-            <h2>Дорогие Яков и Алеся</h2>
+            <h2 id="greeting-names">Дорогие Яков и Алеся</h2>
             <p>В нашей жизни наступает самый счастливый и важный день — день, когда мы становимся семьёй. И для нас невероятно важно, чтобы в этот момент рядом были вы — наши самые родные и близкие люди.
 
                 Приглашаем вас разделить с нами радость этого события и благословить наш союз в начале семейного пути.</p>
@@ -1393,7 +1420,7 @@
             <p class="location-address">
                 Ул. Центральная 2а, Дубица, Брестская область
             </p>
-            <a href="https://yandex.by/maps/-/CPESe0Nj" target="_blank" class="btn" style="margin-top: 1rem;">Как добраться</a>
+            <a href="https://yandex.ru/maps/org/syadziba_dubitsa/142630412312" target="_blank" class="btn" style="margin-top: 1rem;">Как добраться</a>
         </div>
         </div>
     </section>
@@ -1426,6 +1453,7 @@
                     <img src="image/IMG_2862.JPG" alt="Пример для джентльменов" width="280" height="373">
                 </div>
                 <p class="dress-code-col-caption">Пример для джентльменов</p>
+                <p class="dress-code-col-caption">(любой костюм)</p>
             </div>
         </div>
         </div>
@@ -1466,7 +1494,7 @@
             <p style="text-align: center; margin-bottom: 2rem; color: var(--medium-gray);">
                 Просим подтвердить свое присутствие до 16.07.2026
             </p>
-            <form id="guest-form" action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
+            <form id="guest-form" action="https://formspree.io/f/xykdgrgq" method="POST">
                 <input type="hidden" name="_subject" value="Анкета гостя — Захар и Кристина">
                 <div class="form-group required">
                     <label for="firstName">Имя</label>
@@ -1622,7 +1650,7 @@
                 e.preventDefault();
 
                 const endpoint = form.getAttribute('action') || '';
-                if (!endpoint.includes('formspree.io/f/xykdgrgq') || endpoint.includes('YOUR_FORM_ID')) {
+                if (!endpoint.includes('formspree.io/f/') || endpoint.includes('YOUR_FORM_ID')) {
                     setStatus('Нужно указать Formspree ID в action формы (замени YOUR_FORM_ID).', true);
                     return;
                 }
@@ -1671,6 +1699,50 @@
                 }
             });
         });
+
+        // Personalized greeting from URL parameter
+        (function() {
+            const greetingEl = document.getElementById('greeting-names');
+            if (!greetingEl) return;
+
+            // Get everything after ? (e.g., "СергейНаталия" from "?СергейНаталия")
+            const queryString = window.location.search.substring(1);
+            
+            if (!queryString || queryString.trim() === '') {
+                return; // Use default "Дорогие Яков и Алеся"
+            }
+
+            // Split names by capital letters (Cyrillic and Latin)
+            // Pattern: lowercase letter followed by uppercase letter = new name starts
+            const names = queryString
+                .replace(/([а-яёa-z])([А-ЯЁA-Z])/g, '$1|$2') // Add separator before capital after lowercase
+                .split('|')
+                .filter(name => name.trim() !== '')
+                .map(name => {
+                    // Ensure first letter is uppercase, rest lowercase
+                    const trimmed = name.trim();
+                    if (trimmed.length === 0) return '';
+                    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+                })
+                .filter(name => name !== '');
+
+            if (names.length === 0) return;
+
+            // Format greeting based on number of names
+            let greetingText;
+            if (names.length === 1) {
+                greetingText = `Дорогие ${names[0]}!`;
+            } else if (names.length === 2) {
+                greetingText = `Дорогие ${names[0]} и ${names[1]}!`;
+            } else {
+                // For 3+ names: "Дорогие Имя1, Имя2, Имя3 и Имя4!"
+                const allButLast = names.slice(0, -1).join(', ');
+                const last = names[names.length - 1];
+                greetingText = `Дорогие ${allButLast} и ${last}!`;
+            }
+
+            greetingEl.textContent = greetingText;
+        })();
     </script>
 </body>
 </html>
