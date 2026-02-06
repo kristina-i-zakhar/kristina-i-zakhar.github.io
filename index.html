@@ -87,32 +87,51 @@
             animation: fadeInUp 1s ease-out;
             max-width: 720px;
             width: 100%;
-            padding: 1rem 0; /* small vertical padding so content breathes */
+            padding: 3.5rem 1.75rem; /* increased vertical + horizontal padding for more breathing room */
+            box-sizing: border-box;
         }
 
         .hero h1 {
             font-family: 'Great Vibes', cursive;
             font-size: clamp(1.8rem, 4.5vw, 2.8rem); /* slightly smaller Save the date */
             color: var(--dark-gray);
-            margin-bottom: 0.35rem;
+            margin-bottom: 0.5rem; /* more space below Save the date */
+            transform: translateY(-8px); /* nudge a bit higher */
             text-shadow: 0 1px 2px rgba(255, 255, 255, 1), 0 2px 8px rgba(0, 0, 0, 0.08);
             letter-spacing: 0.02em;
         }
 
         .hero .names {
             font-family: 'Great Vibes', cursive;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             font-size: clamp(3.2rem, 12vw, 6rem);
             color: var(--lavender);
-            margin-bottom: 0.6rem;
+            margin-bottom: 0.9rem; /* push date a bit lower */
             font-weight: 400;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.02em;
             text-align: center;
-            line-height: 1.08; /* increase line-height to avoid overlapping on small screens */
+            line-height: 1.06; /* avoid overlapping on small screens */
+        }
+
+        .hero .names .name-line {
+            display: block;
+            line-height: 1;
+        }
+        .hero .names .and {
+            display: block;
+            font-size: 0.6em;
+            color: rgba(85,85,85,0.9);
+            margin: 0.12rem 0;
+            transform: translateY(-2px);
         }
 
         .hero .date {
             font-size: clamp(1.3rem, 4.2vw, 2rem);
             color: var(--medium-gray);
+            margin-top: 0.6rem;
             margin-bottom: 1.75rem;
         }
 
@@ -1295,26 +1314,30 @@
             .hero .hero-content {
                 width: 100%;
                 max-width: 720px;
-                padding: 0.6rem 0;
+                padding: 10rem 1.5rem; /* larger vertical padding on mobile for bigger gaps */
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                justify-content: center;
+                justify-content: space-between; /* top: save, middle: names, bottom: date */
+                height: 100%;
+                box-sizing: border-box;
             }
 
             .hero h1 {
                 font-size: clamp(1.8rem, 6vw, 2.8rem);
                 margin-bottom: 0.15rem;
+                transform: translateY(-18px);
             }
 
             .hero .names {
                 font-size: clamp(3.6rem, 18vw, 6.4rem);
-                line-height: 1.12; /* increase to avoid overlap */
+                line-height: 1.18; /* increase to avoid overlap */
                 margin-bottom: 0.5rem;
             }
 
             .hero .date {
                 font-size: clamp(1.05rem, 4.2vw, 1.6rem);
+                margin-top: 0.8rem;
                 margin-bottom: 0.6rem;
             }
 
@@ -1354,7 +1377,11 @@
     <section class="hero" id="hero">
         <div class="hero-content">
             <h1>Save the date</h1>
-            <div class="names">Захар и Кристина</div>
+            <div class="names">
+                <span class="name-line">Захар</span>
+                <span class="and">и</span>
+                <span class="name-line">Кристина</span>
+            </div>
             <div class="date">
                 Воскресенье • <span class="date-number">16</span> Август 2026
             </div>
@@ -1504,7 +1531,7 @@
 
         <div class="location-block">
             <div class="location-photo-wrap">
-                <img src="image/IMG_2622_r.png" alt="Начало венчания" width="160" height="160">
+                <img src="image/photo_2026-02-06_22-40-39.jpg" alt="Начало венчания" width="160" height="160">
             </div>
             <h3>Праздничный банкет</h3>
             <p class="location-address">
