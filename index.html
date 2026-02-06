@@ -63,7 +63,7 @@
             justify-content: flex-start;
             align-items: center;
             text-align: center;
-            padding: 3rem 2rem 1.25rem;
+            padding: 4rem 2rem 2.5rem;
             position: relative;
         }
 
@@ -89,7 +89,7 @@
 
         .hero h1 {
             font-family: 'Great Vibes', cursive;
-            font-size: clamp(2.8rem, 9vw, 5rem);
+            font-size: clamp(2.6rem, 8vw, 4.2rem);
             color: var(--dark-gray);
             margin-bottom: 0.25rem;
             text-shadow: 0 1px 2px rgba(255, 255, 255, 1), 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -98,7 +98,7 @@
 
         .hero .names {
             font-family: 'Great Vibes', cursive;
-            font-size: clamp(4rem, 14vw, 8rem);
+            font-size: clamp(3.6rem, 11vw, 6rem);
             color: var(--lavender);
             margin-bottom: 0.6rem;
             font-weight: 400;
@@ -107,9 +107,9 @@
         }
 
         .hero .date {
-            font-size: clamp(1.2rem, 3.8vw, 1.9rem);
+            font-size: clamp(1.3rem, 4.2vw, 2rem);
             color: var(--medium-gray);
-            margin-bottom: 0.9rem;
+            margin-bottom: 1.75rem;
         }
 
         .hero .lead-text {
@@ -871,6 +871,39 @@
             box-shadow: 0 4px 20px rgba(170, 131, 182, 0.1);
         }
 
+        /* Attendees list styling */
+        #attendees-list {
+            display: block;
+        }
+
+        #attendees-list label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+        }
+
+        #attendees-list input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #AA83B6;
+        }
+
+        #attendees-list input[type="radio"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #AA83B6;
+        }
+
+        @media (max-width: 480px) {
+            #attendees-list label {
+                justify-content: center;
+            }
+            #attendees-list span {
+                display: inline-block;
+            }
+        }
+
         .form-group {
             margin-bottom: 1.5rem;
         }
@@ -1217,16 +1250,22 @@
                 max-width: 240px;
             }
 
+            .hero {
+                padding: 2.2rem 1rem 1.2rem;
+                min-height: 72vh;
+            }
             .hero h1 {
-                font-size: clamp(2.4rem, 7vw, 3.2rem);
+                font-size: clamp(3rem, 10vw, 4rem);
             }
 
             .hero .names {
-                font-size: clamp(2.8rem, 9vw, 4.2rem);
+                font-size: clamp(4rem, 16vw, 7rem);
+                line-height: 0.95;
+                margin-bottom: 0.4rem;
             }
 
             .hero .date {
-                font-size: clamp(1.4rem, 4.5vw, 1.9rem);
+                font-size: clamp(1.2rem, 4.5vw, 1.8rem);
             }
 
             .date-number {
@@ -1518,8 +1557,10 @@
                 <div id="attendees-list" class="form-group" aria-live="polite" style="margin-bottom:1rem;">
                     <!-- dynamically filled -->
                 </div>
-                <!-- Hidden JSON summary of attendees (invited + present) -->
+                <!-- Hidden summary fields for backend -->
                 <input type="hidden" name="attendees_json" id="attendees_json" value="">
+                <input type="hidden" name="attendees_invited" id="attendees_invited" value="">
+                <input type="hidden" name="attendees_present" id="attendees_present" value="">
 
                 <div class="form-group required">
                     <label for="lastName">Фамилия</label>
@@ -1660,14 +1701,28 @@
             function collectAttendees() {
                 const invited = Array.isArray(window._invitedNames) ? window._invitedNames.slice() : [];
                 const present = [];
-                // check checkboxes
-                const boxes = document.querySelectorAll('#attendees-list input[type="checkbox"]');
-                boxes.forEach(cb => {
-                    if (cb.checked) present.push(cb.value);
-                });
+                // single-person radio case
+                if (invited.length === 1) {
+                    const singleRadio = document.querySelector('input[name="single_present"]:checked');
+                    const presentVal = singleRadio ? singleRadio.value === 'yes' : false;
+                    if (presentVal) present.push(invited[0]);
+                } else {
+                    // check checkboxes
+                    const boxes = document.querySelectorAll('#attendees-list input[type="checkbox"]');
+                    boxes.forEach(cb => {
+                        if (cb.checked) present.push(cb.value);
+                    });
+                }
+
                 const summary = { invited, present };
                 const hidden = document.getElementById('attendees_json');
                 if (hidden) hidden.value = JSON.stringify(summary);
+
+                const hidInv = document.getElementById('attendees_invited');
+                const hidPres = document.getElementById('attendees_present');
+                if (hidInv) hidInv.value = invited.join(', ');
+                if (hidPres) hidPres.value = present.join(', ');
+
                 return summary;
             }
 
@@ -1803,20 +1858,57 @@
                 }
                 container.style.display = 'block';
                 if (names.length === 1) {
-                    // Single invited person — show plain name (no checkbox)
+                    // Single invited person — show name and a radio to confirm presence
                     const singleWrap = document.createElement('div');
                     singleWrap.style.display = 'flex';
+                    singleWrap.style.flexDirection = 'column';
                     singleWrap.style.alignItems = 'center';
-                    singleWrap.style.justifyContent = 'center';
                     singleWrap.style.padding = '0.5rem 0';
+
                     const nameEl = document.createElement('div');
                     nameEl.textContent = names[0];
                     nameEl.style.fontWeight = '600';
                     nameEl.style.fontSize = '1.15rem';
                     nameEl.style.color = 'var(--dark-gray)';
+                    nameEl.style.marginBottom = '0.5rem';
                     singleWrap.appendChild(nameEl);
+
+                    const radiosWrap = document.createElement('div');
+                    radiosWrap.style.display = 'flex';
+                    radiosWrap.style.gap = '1rem';
+                    radiosWrap.style.alignItems = 'center';
+
+                    const yesLabel = document.createElement('label');
+                    yesLabel.style.display = 'flex';
+                    yesLabel.style.alignItems = 'center';
+                    const yes = document.createElement('input');
+                    yes.type = 'radio';
+                    yes.name = 'single_present';
+                    yes.value = 'yes';
+                    yes.checked = true;
+                    yesLabel.appendChild(yes);
+                    const yesText = document.createElement('span');
+                    yesText.textContent = 'Буду присутствовать';
+                    yesText.style.marginLeft = '0.4rem';
+                    yesLabel.appendChild(yesText);
+
+                    const noLabel = document.createElement('label');
+                    noLabel.style.display = 'flex';
+                    noLabel.style.alignItems = 'center';
+                    const no = document.createElement('input');
+                    no.type = 'radio';
+                    no.name = 'single_present';
+                    no.value = 'no';
+                    noLabel.appendChild(no);
+                    const noText = document.createElement('span');
+                    noText.textContent = 'Не смогу';
+                    noText.style.marginLeft = '0.4rem';
+                    noLabel.appendChild(noText);
+
+                    radiosWrap.appendChild(yesLabel);
+                    radiosWrap.appendChild(noLabel);
+                    singleWrap.appendChild(radiosWrap);
                     container.appendChild(singleWrap);
-                    // keep attendees_json updated on submit (present will be empty unless they check elsewhere)
                     return;
                 }
 
