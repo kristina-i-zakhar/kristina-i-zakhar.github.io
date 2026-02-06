@@ -63,7 +63,7 @@
             justify-content: flex-start;
             align-items: center;
             text-align: center;
-            padding: 4rem 2rem 2.5rem;
+            padding: 3rem 2rem 1.25rem;
             position: relative;
         }
 
@@ -89,26 +89,27 @@
 
         .hero h1 {
             font-family: 'Great Vibes', cursive;
-            font-size: clamp(2.6rem, 8vw, 4.2rem);
+            font-size: clamp(2.8rem, 9vw, 5rem);
             color: var(--dark-gray);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
             text-shadow: 0 1px 2px rgba(255, 255, 255, 1), 0 2px 8px rgba(0, 0, 0, 0.08);
             letter-spacing: 0.04em;
         }
 
         .hero .names {
             font-family: 'Great Vibes', cursive;
-            font-size: clamp(3.6rem, 11vw, 6rem);
+            font-size: clamp(4rem, 14vw, 8rem);
             color: var(--lavender);
-            margin-bottom: 1.5rem;
+            margin-bottom: 0.6rem;
             font-weight: 400;
             letter-spacing: 0.08em;
+            text-align: center;
         }
 
         .hero .date {
-            font-size: clamp(1.3rem, 4.2vw, 2rem);
+            font-size: clamp(1.2rem, 3.8vw, 1.9rem);
             color: var(--medium-gray);
-            margin-bottom: 1.75rem;
+            margin-bottom: 0.9rem;
         }
 
         .hero .lead-text {
@@ -1801,6 +1802,24 @@
                     return;
                 }
                 container.style.display = 'block';
+                if (names.length === 1) {
+                    // Single invited person — show plain name (no checkbox)
+                    const singleWrap = document.createElement('div');
+                    singleWrap.style.display = 'flex';
+                    singleWrap.style.alignItems = 'center';
+                    singleWrap.style.justifyContent = 'center';
+                    singleWrap.style.padding = '0.5rem 0';
+                    const nameEl = document.createElement('div');
+                    nameEl.textContent = names[0];
+                    nameEl.style.fontWeight = '600';
+                    nameEl.style.fontSize = '1.15rem';
+                    nameEl.style.color = 'var(--dark-gray)';
+                    singleWrap.appendChild(nameEl);
+                    container.appendChild(singleWrap);
+                    // keep attendees_json updated on submit (present will be empty unless they check elsewhere)
+                    return;
+                }
+
                 const hint = document.createElement('div');
                 hint.style.marginBottom = '0.5rem';
                 hint.style.color = 'var(--medium-gray)';
@@ -1892,9 +1911,10 @@
             } else if (names.length === 2) {
                 greetingText = `Дорогие ${names[0]} и ${names[1]}!`;
             } else {
+                // For 3+ names use "A, B, а также C"
                 const allButLast = names.slice(0, -1).join(', ');
                 const last = names[names.length - 1];
-                greetingText = `Дорогие ${allButLast} и ${last}!`;
+                greetingText = `Дорогие ${allButLast}, а также ${last}!`;
             }
 
             greetingEl.textContent = greetingText;
