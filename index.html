@@ -1234,14 +1234,31 @@
                 line-height: 50px;
             }
 
+            /* Make hero section fill more space on small screens and center content nicely */
+            .hero {
+                min-height: 78vh;
+                display: flex;
+                align-items: center;
+                padding: 3.5rem 1rem;
+            }
+
+            .hero .hero-content {
+                width: 100%;
+                padding: 0 1rem;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+
             .countdown-container {
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
                 gap: 1rem;
-                max-width: 280px;
+                max-width: 320px;
                 margin-left: auto;
                 margin-right: auto;
-                margin-top: 2rem;
+                margin-top: 1.75rem;
             }
 
             .countdown-item {
@@ -1494,7 +1511,7 @@
             <p style="text-align: center; margin-bottom: 2rem; color: var(--medium-gray);">
                 Просим подтвердить свое присутствие до 16.07.2026
             </p>
-            <form id="guest-form" action="https://formspree.io/f/xykdgrgq" method="POST">
+            <form id="guest-form" action="https://script.google.com/macros/s/AKfycbzdzVvFbN6AsxsgHtLWVvRS6bXeqAAFGnyKxNLbrVuse2YoccXJaJCjmcR0yypG4bHt/exec" method="POST">
                 <input type="hidden" name="_subject" value="Анкета гостя — Захар и Кристина">
                 <div class="form-group required">
                     <label for="firstName">Имя</label>
@@ -1631,7 +1648,7 @@
             observer.observe(section);
         });
 
-        // Form handling (Formspree)
+        // Form handling - supports Formspree and generic endpoints (Google Apps Script / Forms)
         (function () {
             const form = document.getElementById('guest-form');
             if (!form) return;
@@ -1650,8 +1667,8 @@
                 e.preventDefault();
 
                 const endpoint = form.getAttribute('action') || '';
-                if (!endpoint.includes('formspree.io/f/') || endpoint.includes('YOUR_FORM_ID')) {
-                    setStatus('Нужно указать Formspree ID в action формы (замени YOUR_FORM_ID).', true);
+                if (!endpoint || endpoint.includes('YOUR_FORM_ID')) {
+                    setStatus('Укажите рабочий endpoint в action формы (Formspree или Google Apps Script URL).', true);
                     return;
                 }
 
@@ -1663,11 +1680,37 @@
                 setStatus('Отправляем…', false);
 
                 try {
-                    const resp = await fetch(endpoint, {
-                        method: 'POST',
-                        body: new FormData(form),
-                        headers: { 'Accept': 'application/json' }
-                    });
+                    const formData = new FormData(form);
+
+                    let fetchOptions;
+                    // If sending to a Google Apps Script web app endpoint, send JSON (Apps Script easier to parse)
+                    if (endpoint.includes('script.google.com') || endpoint.includes('script.googleusercontent.com')) {
+                        const obj = {};
+                        formData.forEach((value, key) => {
+                            if (obj[key]) {
+                                if (Array.isArray(obj[key])) obj[key].push(value);
+                                else obj[key] = [obj[key], value];
+                            } else {
+                                obj[key] = value;
+                            }
+                        });
+                        fetchOptions = {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(obj)
+                        };
+                    } else {
+                        fetchOptions = {
+                            method: 'POST',
+                            body: formData
+                        };
+                        // If using Formspree, request JSON response
+                        if (endpoint.includes('formspree.io')) {
+                            fetchOptions.headers = { 'Accept': 'application/json' };
+                        }
+                    }
+
+                    const resp = await fetch(endpoint, fetchOptions);
 
                     if (resp.ok) {
                         setStatus('Спасибо! Ответ отправлен.', false);
@@ -1700,48 +1743,57 @@
             });
         });
 
-        // Personalized greeting from URL parameter
+        // Personalized greeting from URL parameter with caching (localStorage)
         (function() {
             const greetingEl = document.getElementById('greeting-names');
             if (!greetingEl) return;
 
-            // Get everything after ? (e.g., "СергейНаталия" from "?СергейНаталия")
-            const queryString = window.location.search.substring(1);
-            
-            if (!queryString || queryString.trim() === '') {
-                return; // Use default "Дорогие Яков и Алеся"
+            function parseNamesFromQuery(q) {
+                if (!q) return [];
+                try { q = decodeURIComponent(q); } catch (e) { /* ignore */ }
+                // Try to match sequences that look like names: capital + lowercase (Cyrillic/Latin)
+                const m = q.match(/([А-ЯЁ][а-яё]+)|([A-Z][a-z]+)/g);
+                if (m && m.length) {
+                    return m.map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase());
+                }
+                // Fallback: split by non-letter characters
+                return q.split(/[^а-яёА-ЯЁa-zA-Z]+/).filter(Boolean);
             }
 
-            // Split names by capital letters (Cyrillic and Latin)
-            // Pattern: lowercase letter followed by uppercase letter = new name starts
-            const names = queryString
-                .replace(/([а-яёa-z])([А-ЯЁA-Z])/g, '$1|$2') // Add separator before capital after lowercase
-                .split('|')
-                .filter(name => name.trim() !== '')
-                .map(name => {
-                    // Ensure first letter is uppercase, rest lowercase
-                    const trimmed = name.trim();
-                    if (trimmed.length === 0) return '';
-                    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
-                })
-                .filter(name => name !== '');
+            const queryString = window.location.search.substring(1);
+            let names = parseNamesFromQuery(queryString);
+
+            // If no names from URL, try to load from cache
+            if (names.length === 0) {
+                try {
+                    const stored = localStorage.getItem('guestNames');
+                    if (stored) names = JSON.parse(stored);
+                } catch (e) { /* ignore */ }
+            } else {
+                // Save parsed names to cache
+                try { localStorage.setItem('guestNames', JSON.stringify(names)); } catch (e) {}
+            }
 
             if (names.length === 0) return;
 
-            // Format greeting based on number of names
             let greetingText;
             if (names.length === 1) {
                 greetingText = `Дорогие ${names[0]}!`;
             } else if (names.length === 2) {
                 greetingText = `Дорогие ${names[0]} и ${names[1]}!`;
             } else {
-                // For 3+ names: "Дорогие Имя1, Имя2, Имя3 и Имя4!"
                 const allButLast = names.slice(0, -1).join(', ');
                 const last = names[names.length - 1];
                 greetingText = `Дорогие ${allButLast} и ${last}!`;
             }
 
             greetingEl.textContent = greetingText;
+
+            // Prefill form name field if present
+            const nameInput = document.querySelector('#guest-form input[name="firstName"], #guest-form input[name="name"]');
+            if (nameInput && names.length > 0) {
+                nameInput.value = names.join(' ');
+            }
         })();
     </script>
 </body>
