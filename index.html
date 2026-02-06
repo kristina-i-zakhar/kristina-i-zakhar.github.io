@@ -873,7 +873,10 @@
 
         /* Attendees list styling */
         #attendees-list {
-            display: block;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         #attendees-list label {
@@ -893,6 +896,31 @@
             width: 16px;
             height: 16px;
             accent-color: #AA83B6;
+        }
+
+        /* attendee wrapper */
+        .attendee {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.6);
+            padding: 0.6rem 1rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 14px rgba(170,131,182,0.06);
+            border: 1px solid rgba(212,193,232,0.35);
+            margin: 0.2rem 0;
+            min-width: 220px;
+        }
+
+        .attendee input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            flex: 0 0 auto;
+        }
+
+        .attendee span {
+            display: inline-block;
+            vertical-align: middle;
         }
 
         @media (max-width: 480px) {
@@ -1250,36 +1278,12 @@
                 max-width: 240px;
             }
 
+            /* Compact hero for small screens: reduce empty space, increase mobile font sizes, improve line-height */
             .hero {
-                padding: 2.2rem 1rem 1.2rem;
-                min-height: 72vh;
-            }
-            .hero h1 {
-                font-size: clamp(3rem, 10vw, 4rem);
-            }
-
-            .hero .names {
-                font-size: clamp(4rem, 16vw, 7rem);
-                line-height: 0.95;
-                margin-bottom: 0.4rem;
-            }
-
-            .hero .date {
-                font-size: clamp(1.2rem, 4.5vw, 1.8rem);
-            }
-
-            .date-number {
-                width: 50px;
-                height: 50px;
-                line-height: 50px;
-            }
-
-            /* Make hero section fill more space on small screens and center content nicely */
-            .hero {
-                min-height: 78vh;
+                padding: 1.6rem 1rem 1rem;
+                min-height: 56vh;
                 display: flex;
-                align-items: center;
-                padding: 3.5rem 1rem;
+                align-items: flex-start;
             }
 
             .hero .hero-content {
@@ -1288,7 +1292,29 @@
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                justify-content: center;
+                justify-content: flex-start;
+            }
+
+            .hero h1 {
+                font-size: clamp(2.8rem, 9.5vw, 4rem);
+                margin-bottom: 0.1rem;
+            }
+
+            .hero .names {
+                font-size: clamp(3.6rem, 14vw, 6rem);
+                line-height: 1.06; /* avoid overlapping */
+                margin-bottom: 0.4rem;
+            }
+
+            .hero .date {
+                font-size: clamp(1.1rem, 4.2vw, 1.7rem);
+                margin-bottom: 0.8rem;
+            }
+
+            .date-number {
+                width: 48px;
+                height: 48px;
+                line-height: 48px;
             }
 
             .countdown-container {
@@ -1298,16 +1324,16 @@
                 max-width: 320px;
                 margin-left: auto;
                 margin-right: auto;
-                margin-top: 1.75rem;
+                margin-top: 1.25rem;
             }
 
             .countdown-item {
                 min-width: auto;
-                padding: 1.2rem 0.8rem;
+                padding: 1.1rem 0.8rem;
             }
 
             .countdown-number {
-                font-size: 1.8rem;
+                font-size: 1.6rem;
             }
 
             .program-photo-frame {
@@ -1879,30 +1905,26 @@
                     radiosWrap.style.alignItems = 'center';
 
                     const yesLabel = document.createElement('label');
-                    yesLabel.style.display = 'flex';
-                    yesLabel.style.alignItems = 'center';
+                    yesLabel.className = 'attendee-single';
                     const yes = document.createElement('input');
                     yes.type = 'radio';
                     yes.name = 'single_present';
                     yes.value = 'yes';
                     yes.checked = true;
-                    yesLabel.appendChild(yes);
                     const yesText = document.createElement('span');
                     yesText.textContent = 'Буду присутствовать';
-                    yesText.style.marginLeft = '0.4rem';
+                    yesLabel.appendChild(yes);
                     yesLabel.appendChild(yesText);
 
                     const noLabel = document.createElement('label');
-                    noLabel.style.display = 'flex';
-                    noLabel.style.alignItems = 'center';
+                    noLabel.className = 'attendee-single';
                     const no = document.createElement('input');
                     no.type = 'radio';
                     no.name = 'single_present';
                     no.value = 'no';
-                    noLabel.appendChild(no);
                     const noText = document.createElement('span');
                     noText.textContent = 'Не смогу';
-                    noText.style.marginLeft = '0.4rem';
+                    noLabel.appendChild(no);
                     noLabel.appendChild(noText);
 
                     radiosWrap.appendChild(yesLabel);
@@ -1921,11 +1943,13 @@
                 names.forEach((n, i) => {
                     const idSafe = 'att_' + i + '_' + n.replace(/[^a-zA-Zа-яёА-ЯЁ0-9]/g,'_');
                     const wrapper = document.createElement('label');
-                    wrapper.style.display = 'flex';
-                    wrapper.style.alignItems = 'center';
-                    wrapper.style.gap = '0.6rem';
-                    wrapper.style.marginBottom = '0.5rem';
+                    wrapper.className = 'attendee';
                     wrapper.htmlFor = idSafe;
+
+                    const inner = document.createElement('div');
+                    inner.style.display = 'flex';
+                    inner.style.alignItems = 'center';
+                    inner.style.gap = '0.8rem';
 
                     const cb = document.createElement('input');
                     cb.type = 'checkbox';
@@ -1938,9 +1962,11 @@
                     nameSpan.textContent = n;
                     nameSpan.style.fontWeight = '500';
                     nameSpan.style.color = 'var(--dark-gray)';
+                    nameSpan.style.fontSize = '1.05rem';
 
-                    wrapper.appendChild(cb);
-                    wrapper.appendChild(nameSpan);
+                    inner.appendChild(cb);
+                    inner.appendChild(nameSpan);
+                    wrapper.appendChild(inner);
                     container.appendChild(wrapper);
                 });
             }
@@ -2003,10 +2029,25 @@
             } else if (names.length === 2) {
                 greetingText = `Дорогие ${names[0]} и ${names[1]}!`;
             } else {
-                // For 3+ names use "A, B, а также C"
-                const allButLast = names.slice(0, -1).join(', ');
-                const last = names[names.length - 1];
-                greetingText = `Дорогие ${allButLast}, а также ${last}!`;
+                // For 3+ names use pattern:
+                // "Дорогие A и B, а также C!" (for 3)
+                // "Дорогие A и B, а также C и D!" (for 4)
+                // "Дорогие A и B, а также C, D и E!" (for 5+)
+                const first = names[0];
+                const second = names[1];
+                const rest = names.slice(2);
+                let restStr = '';
+                if (rest.length === 1) {
+                    restStr = rest[0];
+                } else if (rest.length === 2) {
+                    restStr = `${rest[0]} и ${rest[1]}`;
+                } else {
+                    // 3 or more in rest: join with commas and "и" before last
+                    const allButLastRest = rest.slice(0, -1).join(', ');
+                    const lastRest = rest[rest.length - 1];
+                    restStr = `${allButLastRest} и ${lastRest}`;
+                }
+                greetingText = `Дорогие ${first} и ${second}, а также ${restStr}!`;
             }
 
             greetingEl.textContent = greetingText;
