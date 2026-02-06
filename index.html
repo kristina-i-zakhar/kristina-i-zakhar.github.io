@@ -1663,15 +1663,60 @@
                 statusEl.style.color = isError ? '#b3261e' : 'var(--medium-gray)';
             }
 
-            form.addEventListener('submit', async function (e) {
-                e.preventDefault();
-
+            form.addEventListener('submit', function (e) {
                 const endpoint = form.getAttribute('action') || '';
                 if (!endpoint || endpoint.includes('YOUR_FORM_ID')) {
+                    e.preventDefault();
                     setStatus('Укажите рабочий endpoint в action формы (Formspree или Google Apps Script URL).', true);
                     return;
                 }
 
+                // If sending to Google Apps Script, use normal form submission into a hidden iframe
+                // to avoid CORS preflight issues and blocked responses.
+                if (endpoint.includes('script.google.com') || endpoint.includes('script.googleusercontent.com')) {
+                    e.preventDefault();
+                    setStatus('Отправляем…', false);
+
+                    const iframeName = 'gs_iframe_' + Date.now();
+                    const iframe = document.createElement('iframe');
+                    iframe.name = iframeName;
+                    iframe.style.display = 'none';
+                    document.body.appendChild(iframe);
+
+                    const originalTarget = form.getAttribute('target');
+                    form.setAttribute('target', iframeName);
+
+                    // Disable submit button while sending
+                    const originalBtnText = submitBtn ? submitBtn.textContent : '';
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = 'Отправляем…';
+                    }
+
+                    iframe.addEventListener('load', function () {
+                        // Load event fires when response arrives (we can't read body due to CORS),
+                        // but it means the POST completed.
+                        setStatus('Спасибо! Ответ отправлен.', false);
+                        try { form.reset(); } catch (e) {}
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = originalBtnText;
+                        }
+                        // cleanup
+                        setTimeout(() => {
+                            try { document.body.removeChild(iframe); } catch (e) {}
+                            if (originalTarget) form.setAttribute('target', originalTarget);
+                            else form.removeAttribute('target');
+                        }, 800);
+                    }, { once: true });
+
+                    // Submit normally into the iframe (no fetch, so no CORS)
+                    form.submit();
+                    return;
+                }
+
+                // Otherwise, use fetch (AJAX) for endpoints that support CORS (Formspree etc.)
+                e.preventDefault();
                 const originalBtnText = submitBtn ? submitBtn.textContent : '';
                 if (submitBtn) {
                     submitBtn.disabled = true;
@@ -1679,55 +1724,32 @@
                 }
                 setStatus('Отправляем…', false);
 
-                try {
-                    const formData = new FormData(form);
-
-                    let fetchOptions;
-                    // If sending to a Google Apps Script web app endpoint, send JSON (Apps Script easier to parse)
-                    if (endpoint.includes('script.google.com') || endpoint.includes('script.googleusercontent.com')) {
-                        // To avoid CORS preflight (Google Apps Script doesn't handle OPTIONS),
-                        // send a "simple" request using Content-Type: text/plain
-                        const obj = {};
-                        formData.forEach((value, key) => {
-                            if (obj[key]) {
-                                if (Array.isArray(obj[key])) obj[key].push(value);
-                                else obj[key] = [obj[key], value];
-                            } else {
-                                obj[key] = value;
-                            }
-                        });
-                        fetchOptions = {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                            body: JSON.stringify(obj)
-                        };
-                    } else {
-                        fetchOptions = {
+                (async () => {
+                    try {
+                        const formData = new FormData(form);
+                        const fetchOptions = {
                             method: 'POST',
                             body: formData
                         };
-                        // If using Formspree, request JSON response
                         if (endpoint.includes('formspree.io')) {
                             fetchOptions.headers = { 'Accept': 'application/json' };
                         }
+                        const resp = await fetch(endpoint, fetchOptions);
+                        if (resp.ok) {
+                            setStatus('Спасибо! Ответ отправлен.', false);
+                            form.reset();
+                        } else {
+                            setStatus('Не удалось отправить. Попробуйте ещё раз чуть позже.', true);
+                        }
+                    } catch (err) {
+                        setStatus('Нет связи. Проверь интернет и попробуй ещё раз.', true);
+                    } finally {
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = originalBtnText;
+                        }
                     }
-
-                    const resp = await fetch(endpoint, fetchOptions);
-
-                    if (resp.ok) {
-                        setStatus('Спасибо! Ответ отправлен.', false);
-                        form.reset();
-                    } else {
-                        setStatus('Не удалось отправить. Попробуйте ещё раз чуть позже.', true);
-                    }
-                } catch (err) {
-                    setStatus('Нет связи. Проверь интернет и попробуй ещё раз.', true);
-                } finally {
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = originalBtnText;
-                    }
-                }
+                })();
             });
         })();
 
@@ -1800,7 +1822,11 @@
 
             let greetingText;
             if (names.length === 1) {
-                greetingText = `Дорогие ${names[0]}!`;
+                const single = names[0];
+                const lower = single.toLowerCase();
+                // Heuristic: female names often end with 'а' or 'я' (simple heuristic)
+                const likelyFemale = /[ая]$/.test(lower) && !/илья$/.test(lower);
+                greetingText = likelyFemale ? `Дорогая ${single}!` : `Дорогой ${single}!`;
             } else if (names.length === 2) {
                 greetingText = `Дорогие ${names[0]} и ${names[1]}!`;
             } else {
