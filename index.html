@@ -1685,6 +1685,8 @@
                     let fetchOptions;
                     // If sending to a Google Apps Script web app endpoint, send JSON (Apps Script easier to parse)
                     if (endpoint.includes('script.google.com') || endpoint.includes('script.googleusercontent.com')) {
+                        // To avoid CORS preflight (Google Apps Script doesn't handle OPTIONS),
+                        // send a "simple" request using Content-Type: text/plain
                         const obj = {};
                         formData.forEach((value, key) => {
                             if (obj[key]) {
@@ -1696,7 +1698,7 @@
                         });
                         fetchOptions = {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                             body: JSON.stringify(obj)
                         };
                     } else {
@@ -1750,14 +1752,21 @@
 
             function parseNamesFromQuery(q) {
                 if (!q) return [];
-                try { q = decodeURIComponent(q); } catch (e) { /* ignore */ }
+                // Replace plus with space (in case form-encoding used +)
+                let raw = q.replace(/\+/g, ' ');
+                let decoded = raw;
+                try { decoded = decodeURIComponent(raw); } catch (e) { /* ignore */ }
+                // If still percent-encoded, try decode once more
+                if (/%[0-9A-Fa-f]{2}/.test(decoded)) {
+                    try { decoded = decodeURIComponent(decoded); } catch (e) { /* ignore */ }
+                }
                 // Try to match sequences that look like names: capital + lowercase (Cyrillic/Latin)
-                const m = q.match(/([А-ЯЁ][а-яё]+)|([A-Z][a-z]+)/g);
+                const m = decoded.match(/([А-ЯЁ][а-яё]+)|([A-Z][a-z]+)/g);
                 if (m && m.length) {
                     return m.map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase());
                 }
                 // Fallback: split by non-letter characters
-                return q.split(/[^а-яёА-ЯЁa-zA-Z]+/).filter(Boolean);
+                return decoded.split(/[^а-яёА-ЯЁa-zA-Z]+/).filter(Boolean);
             }
 
             const queryString = window.location.search.substring(1);
@@ -1773,6 +1782,19 @@
                 // Save parsed names to cache
                 try { localStorage.setItem('guestNames', JSON.stringify(names)); } catch (e) {}
             }
+
+            // Also keep a simple guestList (unique) so names across visits are stored
+            try {
+                const entryKey = names.join(' ');
+                if (entryKey) {
+                    const rawList = localStorage.getItem('guestList') || '[]';
+                    const list = Array.isArray(JSON.parse(rawList)) ? JSON.parse(rawList) : [];
+                    if (!list.includes(entryKey)) {
+                        list.push(entryKey);
+                        localStorage.setItem('guestList', JSON.stringify(list));
+                    }
+                }
+            } catch (e) { /* ignore */ }
 
             if (names.length === 0) return;
 
