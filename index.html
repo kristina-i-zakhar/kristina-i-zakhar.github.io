@@ -1297,7 +1297,7 @@
             </div>
         </div>
         <div class="intro-content">
-            <h2 id="greeting-names">Дорогие Яков и Алеся</h2>
+            <h2 id="greeting-names">Дорогие друзья и родные!</h2>
             <p>В нашей жизни наступает самый счастливый и важный день — день, когда мы становимся семьёй. И для нас невероятно важно, чтобы в этот момент рядом были вы — наши самые родные и близкие люди.
 
                 Приглашаем вас разделить с нами радость этого события и благословить наш союз в начале семейного пути.</p>
@@ -1513,21 +1513,21 @@
             </p>
             <form id="guest-form" action="https://script.google.com/macros/s/AKfycbyNr1ydB-7Y_X7d54evAoZqu8EfvtVjrMwz7I8223MJrGXYJHeeNDflgC7mcsVlsLtu/exec" method="POST">
                 <input type="hidden" name="_subject" value="Анкета гостя — Захар и Кристина">
-                <div class="form-group required">
-                    <label for="firstName">Имя</label>
-                    <input type="text" id="firstName" name="firstName" required>
+                <!-- Attendees checkboxes will be injected here based on URL (one checkbox per invited person) -->
+                <div id="attendees-list" class="form-group" aria-live="polite" style="margin-bottom:1rem;">
+                    <!-- dynamically filled -->
                 </div>
+                <!-- Hidden JSON summary of attendees (invited + present) -->
+                <input type="hidden" name="attendees_json" id="attendees_json" value="">
+
                 <div class="form-group required">
                     <label for="lastName">Фамилия</label>
                     <input type="text" id="lastName" name="lastName" required>
                 </div>
-                <div class="form-group required">
-                    <label for="attendance">Будете ли присутствовать?</label>
-                    <select id="attendance" name="attendance" required>
-                        <option value="">Выберите ответ</option>
-                        <option value="yes">Да, буду присутствовать</option>
-                        <option value="no">Нет, не смогу присутствовать</option>
-                    </select>
+
+                <div class="form-group">
+                    <label for="guest-comments">Комментарий</label>
+                    <textarea id="guest-comments" name="comments" placeholder="Если хотите — оставьте комментарий и пожелание"></textarea>
                 </div>
                 <!--  <div class="form-group required">
                     <label for="persons">Количество персон</label>
@@ -1656,6 +1656,20 @@
             const statusEl = document.getElementById('form-status');
             const submitBtn = form.querySelector('button[type="submit"]');
 
+            function collectAttendees() {
+                const invited = Array.isArray(window._invitedNames) ? window._invitedNames.slice() : [];
+                const present = [];
+                // check checkboxes
+                const boxes = document.querySelectorAll('#attendees-list input[type="checkbox"]');
+                boxes.forEach(cb => {
+                    if (cb.checked) present.push(cb.value);
+                });
+                const summary = { invited, present };
+                const hidden = document.getElementById('attendees_json');
+                if (hidden) hidden.value = JSON.stringify(summary);
+                return summary;
+            }
+
             function setStatus(message, isError) {
                 if (!statusEl) return;
                 statusEl.textContent = message;
@@ -1710,6 +1724,8 @@
                         }, 800);
                     }, { once: true });
 
+                    // collect attendees into hidden field before submit
+                    try { collectAttendees(); } catch (er) {}
                     // Submit normally into the iframe (no fetch, so no CORS)
                     form.submit();
                     return;
@@ -1726,6 +1742,8 @@
 
                 (async () => {
                     try {
+                        // collect attendees into hidden field so fetch/FormData includes it
+                        try { collectAttendees(); } catch (er) {}
                         const formData = new FormData(form);
                         const fetchOptions = {
                             method: 'POST',
@@ -1771,6 +1789,50 @@
         (function() {
             const greetingEl = document.getElementById('greeting-names');
             if (!greetingEl) return;
+
+            // helper: render attendees checkboxes into the form
+            function renderAttendeesList(names) {
+                window._invitedNames = names || [];
+                const container = document.getElementById('attendees-list');
+                if (!container) return;
+                container.innerHTML = '';
+                if (!names || names.length === 0) {
+                    container.style.display = 'none';
+                    return;
+                }
+                container.style.display = 'block';
+                const hint = document.createElement('div');
+                hint.style.marginBottom = '0.5rem';
+                hint.style.color = 'var(--medium-gray)';
+                hint.textContent = 'Выберите, кто будет присутствовать:';
+                container.appendChild(hint);
+
+                names.forEach((n, i) => {
+                    const idSafe = 'att_' + i + '_' + n.replace(/[^a-zA-Zа-яёА-ЯЁ0-9]/g,'_');
+                    const wrapper = document.createElement('label');
+                    wrapper.style.display = 'flex';
+                    wrapper.style.alignItems = 'center';
+                    wrapper.style.gap = '0.6rem';
+                    wrapper.style.marginBottom = '0.5rem';
+                    wrapper.htmlFor = idSafe;
+
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.id = idSafe;
+                    cb.name = 'attendees_checkbox';
+                    cb.value = n;
+                    cb.setAttribute('aria-label', n);
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = n;
+                    nameSpan.style.fontWeight = '500';
+                    nameSpan.style.color = 'var(--dark-gray)';
+
+                    wrapper.appendChild(cb);
+                    wrapper.appendChild(nameSpan);
+                    container.appendChild(wrapper);
+                });
+            }
 
             function parseNamesFromQuery(q) {
                 if (!q) return [];
@@ -1837,11 +1899,10 @@
 
             greetingEl.textContent = greetingText;
 
-            // Prefill form name field if present
-            const nameInput = document.querySelector('#guest-form input[name="firstName"], #guest-form input[name="name"]');
-            if (nameInput && names.length > 0) {
-                nameInput.value = names.join(' ');
-            }
+            // Render attendees checkboxes in the form
+            try { renderAttendeesList(names); } catch (e) { /* ignore */ }
+            // expose invited names for submit handler
+            window._invitedNames = names;
         })();
     </script>
 </body>
